@@ -50,28 +50,33 @@ uv run build.py third-article    # build one design
 open output/preview.html         # see them all
 ```
 
-Each design produces 8 files per color, in `output/<slug>/<color>/`:
+Two output trees:
 
-| file                   | purpose                                                  |
-|------------------------|----------------------------------------------------------|
-| `front-mockup.svg`     | t-shirt silhouette w/ design — visual preview            |
-| `back-mockup.svg`      | same, back side                                          |
-| `front.svg` / `back.svg` | flat artwork w/ shirt-color background — preview only |
-| **`front-print.svg`**  | **upload to POD — transparent vector, 12×20 in**         |
-| **`back-print.svg`**   | **upload to POD — transparent vector, back side**        |
-| **`front-print.png`**  | **upload to POD — transparent raster, 3600×6000 px**     |
-| **`back-print.png`**   | **upload to POD — transparent raster, back side**        |
+```
+prints/<slug>/<color>/   ← upload these to POD services (tracked in git)
+  front.svg              transparent vector, 12 in wide @ 300 dpi
+  back.svg               same, back side
+  front.png              transparent raster, 3600 px wide @ 300 dpi
+  back.png               same, back side
+
+output/<slug>/<color>/   ← preview/mockup artifacts (gitignored)
+  front-mockup.svg       shirt silhouette w/ design
+  back-mockup.svg
+  front.svg / back.svg   flat artwork w/ shirt-color background (visual review)
+output/preview.html      browser preview, all designs side-by-side
+```
+
+Canvas height is sized to the design — the front (5 verses + closing) ends
+up taller than the back (catechism). Width is fixed at 12 in.
 
 ## Uploading to a print-on-demand service
 
-The `*-print.svg` and `*-print.png` files have a transparent background and
-the colors baked in for that specific shirt color. Pick the file matching
-your shirt color (`black/` for black tees, `gray/` for gray) and upload
-both front and back.
+Pick the folder matching your shirt color (`prints/<slug>/black/` for black
+tees, `prints/<slug>/gray/` for gray) and upload both front and back.
 
 - **Printful, Printify, Spreadshirt** — accept SVG directly (recommended).
-- **Bonfire, Custom Ink, Teespring** — usually want PNG. Use `*-print.png`.
-- Print area: 12"×20" at 300 dpi. Most services use 12×16 max so they will
+- **Bonfire, Custom Ink, Teespring** — usually want PNG.
+- Print area: 12 in wide. Most services cap height at ~16 in, so they will
   scale down — that's fine, just means even bigger headers in real life.
 
 PNG output requires `cairosvg` + the libcairo C library. On macOS:

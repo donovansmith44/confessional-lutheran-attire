@@ -28,7 +28,8 @@ except (ImportError, OSError):
 
 ROOT = Path(__file__).parent
 SHIRTS_DIR = ROOT / "shirts"
-OUTPUT_DIR = ROOT / "output"
+OUTPUT_DIR = ROOT / "output"   # preview/mockup artifacts (gitignored)
+PRINTS_DIR = ROOT / "prints"   # upload-ready files (tracked in git)
 
 CANVAS_W = 3600
 CANVAS_H = 6000  # 12"x20" @ 300dpi — tall enough for big-headline + big-verse layout
@@ -167,66 +168,38 @@ def title_lines(text: str, max_w: float) -> list[str]:
     return lines
 
 
-def render_front_inner(meta, blocks, palette, with_bg=True):
+BOTTOM_MARGIN = 280  # whitespace below the last element in a side
+
+
+def render_front_layout(meta, blocks, palette, with_bg=True):
+    """Render the front design. Returns (parts, canvas_height)."""
     pad_x = 200
     cx = CANVAS_W // 2
     max_w = CANVAS_W - 2 * pad_x
 
-    out = []
-    if with_bg:
-        out.append(f'<rect width="{CANVAS_W}" height="{CANVAS_H}" fill="{palette["bg"]}"/>')
-
     front_heading = meta.get("front_heading", "")
 
-    # font sizes are in px (= svg user units). canvas 3600x6000 = 12"x20" @ 300dpi,
-    # divide px by ~4.17 for points. 500 ≈ 120pt, 180 ≈ 43pt, 240 ≈ 58pt.
+    # font sizes are in px (= svg user units); divide by ~4.17 for points.
+    # 500 ≈ 120pt, 180 ≈ 43pt, 240 ≈ 58pt.
     verse_font = 180
     cite_font = 72
     closing_font = 240
 
-    heading_zone_bottom = 360
+    content: list[str] = []
+    y = TITLE_Y
     if front_heading:
         t_lines = title_lines(front_heading, max_w)
         svg, end_y = text_block(
-            cx, TITLE_Y, t_lines, TITLE_FONT, palette["body"],
+            cx, y, t_lines, TITLE_FONT, palette["body"],
             family=SANS, weight="800", letter_spacing=18,
         )
-        out.append(svg)
-        rule_y = end_y + TITLE_FONT * 0.55
-        rule_w = 700
-        out.append(
-            f'<line x1="{cx - rule_w // 2}" y1="{rule_y}" '
-            f'x2="{cx + rule_w // 2}" y2="{rule_y}" '
-            f'stroke="{palette["rule"]}" stroke-width="6"/>'
-        )
-        heading_zone_bottom = rule_y + 140
+        content.append(svg)
+        y = end_y + TITLE_FONT * 0.95  # space below title (no rule line)
 
     verse_blocks = [b for b in blocks if (b["heading"] or "").lower() != "closing"]
     closing = next((b for b in blocks if (b["heading"] or "").lower() == "closing"), None)
 
-    def block_h(b):
-        para = " ".join(b["paragraphs"])
-        if "jesus" in b["tags"]:
-            para = f"“{para}”"
-        n = len(wrap_text(para, max_w, verse_font, SERIF_CW))
-        cite_n = len(wrap_text((b["heading"] or "").upper(), max_w, cite_font, SANS_CW))
-        return n * verse_font * 1.22 + cite_font * 1.6 + cite_n * cite_font * 1.22
-
-    # Distribute verses across the full vertical space between heading and closing
-    # so the design fills the shirt instead of clumping at the chest.
-    closing_baseline = CANVAS_H - 360
-    closing_top = closing_baseline - closing_font * 0.75 if closing else CANVAS_H - 200
-    top_pad = 180
-    n_verses = len(verse_blocks)
-    content_h = sum(block_h(b) for b in verse_blocks)
-    slack = closing_top - heading_zone_bottom - top_pad - content_h - 220  # 220 buffer above closing
-    if n_verses > 1:
-        inter_gap = max(verse_font * 1.3, slack / (n_verses - 1))
-        inter_gap = min(inter_gap, verse_font * 2.6)
-    else:
-        inter_gap = 0
-
-    y = heading_zone_bottom + top_pad
+    last_y = y
     for i, b in enumerate(verse_blocks):
         is_jesus = "jesus" in b["tags"]
         color = palette["jesus"] if is_jesus else palette["body"]
@@ -235,7 +208,7 @@ def render_front_inner(meta, blocks, palette, with_bg=True):
             para = f"“{para}”"
         lines = wrap_text(para, max_w, verse_font, SERIF_CW)
         svg, end_y = text_block(cx, y, lines, verse_font, color)
-        out.append(svg)
+        content.append(svg)
         y = end_y + cite_font * 1.6
 
         cite = b["heading"].upper() if b["heading"] else ""
@@ -244,87 +217,109 @@ def render_front_inner(meta, blocks, palette, with_bg=True):
             cx, y, cite_lines, cite_font, palette["citation"],
             family=SANS, weight="600", letter_spacing=10,
         )
-        out.append(cs)
-        if i < n_verses - 1:
-            y = end_y + inter_gap
+        content.append(cs)
+        last_y = end_y
+        if i < len(verse_blocks) - 1:
+            y = end_y + verse_font * 1.55  # gap between verses
 
     if closing:
         para = " ".join(closing["paragraphs"])
+        y = last_y + closing_font * 1.6  # snug gap so "Therefore..." stays near verses
         lines = wrap_text(para, max_w, closing_font, SERIF_CW)
-        svg, _ = text_block(cx, closing_baseline, lines, closing_font, palette["body"], style="italic")
-        out.append(svg)
+        svg, end_y = text_block(cx, y, lines, closing_font, palette["body"], style="italic")
+        content.append(svg)
+        last_y = end_y
 
-    return out
+    height = int(last_y + BOTTOM_MARGIN)
+    parts: list[str] = []
+    if with_bg:
+        parts.append(f'<rect width="{CANVAS_W}" height="{height}" fill="{palette["bg"]}"/>')
+    parts.extend(content)
+    return parts, height
 
 
-def render_back_inner(meta, blocks, palette, with_bg=True):
+def render_back_layout(meta, blocks, palette, with_bg=True):
+    """Render the back design. Returns (parts, canvas_height)."""
     pad_x = 200
     cx = CANVAS_W // 2
     max_w = CANVAS_W - 2 * pad_x
 
-    out = []
-    if with_bg:
-        out.append(f'<rect width="{CANVAS_W}" height="{CANVAS_H}" fill="{palette["bg"]}"/>')
-
     heading = meta.get("back_heading") or meta.get("title", "")
     sub = meta.get("back_subheading", "")
+    body_font = 160
 
+    content: list[str] = []
+    y = TITLE_Y
     h_lines = title_lines(heading, max_w)
     svg, end_y = text_block(
-        cx, TITLE_Y, h_lines, TITLE_FONT, palette["body"],
+        cx, y, h_lines, TITLE_FONT, palette["body"],
         family=SANS, weight="800", letter_spacing=18,
     )
-    out.append(svg)
-    y = end_y + TITLE_FONT * 0.55
+    content.append(svg)
+    y = end_y + TITLE_FONT * 0.95  # space below title (no rule line)
 
     if sub:
         s_font = 96
         s_lines = wrap_text(sub, max_w, s_font, SERIF_CW)
         svg, end_y = text_block(cx, y, s_lines, s_font, palette["muted"], style="italic")
-        out.append(svg)
+        content.append(svg)
         y = end_y + s_font * 1.4
-
-    rule_w = 700
-    out.append(
-        f'<line x1="{cx - rule_w // 2}" y1="{y}" x2="{cx + rule_w // 2}" '
-        f'y2="{y}" stroke="{palette["rule"]}" stroke-width="6"/>'
-    )
-    y += 200
 
     body_blocks = [b for b in blocks if (b["heading"] or "").lower() != "closing"]
     closing = next((b for b in blocks if (b["heading"] or "").lower() == "closing"), None)
 
-    body_font = 160
+    last_y = y
     for body_block in body_blocks:
         for para in body_block["paragraphs"]:
             lines = wrap_text(para, max_w, body_font, SERIF_CW)
             svg, end_y = text_block(cx, y, lines, body_font, palette["body"])
-            out.append(svg)
+            content.append(svg)
+            last_y = end_y
             y = end_y + body_font * 1.95  # extra paragraph separation
 
     if closing:
         closing_font = 220
         para = " ".join(closing["paragraphs"])
-        y += body_font * 0.5
+        y = last_y + closing_font * 1.6
         lines = wrap_text(para, max_w, closing_font, SERIF_CW)
-        svg, _ = text_block(cx, y, lines, closing_font, palette["body"], style="italic")
-        out.append(svg)
+        svg, end_y = text_block(cx, y, lines, closing_font, palette["body"], style="italic")
+        content.append(svg)
+        last_y = end_y
 
-    return out
+    height = int(last_y + BOTTOM_MARGIN)
+    parts: list[str] = []
+    if with_bg:
+        parts.append(f'<rect width="{CANVAS_W}" height="{height}" fill="{palette["bg"]}"/>')
+    parts.extend(content)
+    return parts, height
+
+
+# legacy aliases used elsewhere
+def render_front_inner(meta, blocks, palette, with_bg=True):
+    parts, _ = render_front_layout(meta, blocks, palette, with_bg)
+    return parts
+
+
+def render_back_inner(meta, blocks, palette, with_bg=True):
+    parts, _ = render_back_layout(meta, blocks, palette, with_bg)
+    return parts
 
 
 def render_front(meta, blocks, palette):
-    return wrap_svg(render_front_inner(meta, blocks, palette, with_bg=True))
+    parts, h = render_front_layout(meta, blocks, palette, with_bg=True)
+    return wrap_svg(parts, h)
 
 
 def render_back(meta, blocks, palette):
-    return wrap_svg(render_back_inner(meta, blocks, palette, with_bg=True))
+    parts, h = render_back_layout(meta, blocks, palette, with_bg=True)
+    return wrap_svg(parts, h)
 
 
 # Mockup: shirt silhouette with the design embedded over the chest+torso.
-# viewBox 800x880; print region matches canvas aspect (0.667) for full chest-to-belly.
+# Print box width is fixed; height is computed per-design from the canvas height
+# returned by the layout function (so each shirt's print box matches its design).
 MOCKUP_W, MOCKUP_H = 800, 880
-PRINT_X, PRINT_Y, PRINT_W, PRINT_H = 255, 195, 290, 483  # aspect 0.6 to match 3600x6000 canvas
+PRINT_X, PRINT_Y, PRINT_W = 255, 200, 290
 
 
 def shirt_path(side: str) -> str:
@@ -373,10 +368,12 @@ def shirt_path(side: str) -> str:
 def render_mockup(meta, sections, color, side):
     palette = PALETTES[color]
     if side == "front":
-        inner = render_front_inner(meta, sections.get("Front", []), palette, with_bg=False)
+        inner, design_h = render_front_layout(meta, sections.get("Front", []), palette, with_bg=False)
     else:
-        inner = render_back_inner(meta, sections.get("Back", []), palette, with_bg=False)
+        inner, design_h = render_back_layout(meta, sections.get("Back", []), palette, with_bg=False)
 
+    # cap the print box so very tall designs don't overflow the shirt body
+    print_h = min(PRINT_W * design_h / CANVAS_W, MOCKUP_H - PRINT_Y - 200)
     inner_str = "\n      ".join(inner)
     backdrop = "#1d1d1d"
     # subtle vertical shading on the shirt fabric for a hint of depth
@@ -402,8 +399,8 @@ def render_mockup(meta, sections, color, side):
         f'stroke="rgba(0,0,0,0.45)" stroke-width="1.5" filter="url(#drop)"/>\n'
         f'  <path d="{shirt_path(side)}" fill="url(#{shade_id})"/>\n'
         f'  <g clip-path="url(#clip-{side})">\n'
-        f'    <svg x="{PRINT_X}" y="{PRINT_Y}" width="{PRINT_W}" height="{PRINT_H}" '
-        f'viewBox="0 0 {CANVAS_W} {CANVAS_H}" preserveAspectRatio="xMidYMid meet">\n'
+        f'    <svg x="{PRINT_X}" y="{PRINT_Y}" width="{PRINT_W}" height="{print_h:.1f}" '
+        f'viewBox="0 0 {CANVAS_W} {design_h}" preserveAspectRatio="xMidYMin meet">\n'
         f'      {inner_str}\n'
         f'    </svg>\n'
         f'  </g>\n'
@@ -411,12 +408,13 @@ def render_mockup(meta, sections, color, side):
     )
 
 
-def wrap_svg(parts):
+def wrap_svg(parts, height=None):
+    h = height if height is not None else CANVAS_H
     body = "\n".join(parts)
     return (
         f'<svg xmlns="http://www.w3.org/2000/svg" '
-        f'viewBox="0 0 {CANVAS_W} {CANVAS_H}" '
-        f'width="{CANVAS_W}" height="{CANVAS_H}">\n{body}\n</svg>\n'
+        f'viewBox="0 0 {CANVAS_W} {h}" '
+        f'width="{CANVAS_W}" height="{h}">\n{body}\n</svg>\n'
     )
 
 
@@ -428,7 +426,9 @@ def build_one(path: Path):
     for color in colors:
         palette = PALETTES[color]
         out_dir = OUTPUT_DIR / slug / color
+        prints_dir = PRINTS_DIR / slug / color
         out_dir.mkdir(parents=True, exist_ok=True)
+        prints_dir.mkdir(parents=True, exist_ok=True)
 
         front_blocks = sections.get("Front", [])
         back_blocks = sections.get("Back", [])
@@ -441,25 +441,27 @@ def build_one(path: Path):
         (out_dir / "front-mockup.svg").write_text(render_mockup(meta, sections, color, "front"))
         (out_dir / "back-mockup.svg").write_text(render_mockup(meta, sections, color, "back"))
 
-        # print-ready (transparent background) — upload these to POD services
-        front_print_svg = wrap_svg(render_front_inner(meta, front_blocks, palette, with_bg=False))
-        back_print_svg = wrap_svg(render_back_inner(meta, back_blocks, palette, with_bg=False))
-        (out_dir / "front-print.svg").write_text(front_print_svg)
-        (out_dir / "back-print.svg").write_text(back_print_svg)
+        # print-ready (transparent bg) — written to tracked prints/<slug>/<color>/
+        front_parts, front_h = render_front_layout(meta, front_blocks, palette, with_bg=False)
+        back_parts, back_h = render_back_layout(meta, back_blocks, palette, with_bg=False)
+        front_print_svg = wrap_svg(front_parts, front_h)
+        back_print_svg = wrap_svg(back_parts, back_h)
+        (prints_dir / "front.svg").write_text(front_print_svg)
+        (prints_dir / "back.svg").write_text(back_print_svg)
 
         if HAVE_CAIROSVG:
             cairosvg.svg2png(
                 bytestring=front_print_svg.encode("utf-8"),
-                write_to=str(out_dir / "front-print.png"),
-                output_width=CANVAS_W, output_height=CANVAS_H,
+                write_to=str(prints_dir / "front.png"),
+                output_width=CANVAS_W, output_height=front_h,
             )
             cairosvg.svg2png(
                 bytestring=back_print_svg.encode("utf-8"),
-                write_to=str(out_dir / "back-print.png"),
-                output_width=CANVAS_W, output_height=CANVAS_H,
+                write_to=str(prints_dir / "back.png"),
+                output_width=CANVAS_W, output_height=back_h,
             )
 
-        print(f"  - {color}: {out_dir.relative_to(ROOT)}")
+        print(f"  - {color}: preview→{out_dir.relative_to(ROOT)}  prints→{prints_dir.relative_to(ROOT)}")
     return slug, colors, meta["title"]
 
 
@@ -469,8 +471,8 @@ def write_preview(designs):
     for slug, colors, title in designs:
         for color in colors:
             png_links = (
-                f' &middot; <a href="{slug}/{color}/front-print.png">front PNG</a>'
-                f' &middot; <a href="{slug}/{color}/back-print.png">back PNG</a>'
+                f' &middot; <a href="../prints/{slug}/{color}/front.png">front PNG</a>'
+                f' &middot; <a href="../prints/{slug}/{color}/back.png">back PNG</a>'
             ) if HAVE_CAIROSVG else ""
             cards.append(f'''      <section class="design">
         <h2>{escape(title)} — <span class="meta">{color}</span></h2>
@@ -479,9 +481,9 @@ def write_preview(designs):
           <figure><img src="{slug}/{color}/back-mockup.svg" alt="back"/><figcaption>back</figcaption></figure>
         </div>
         <p class="upload">
-          Upload to your POD service (transparent, 12&times;20 in @ 300 dpi):
-          <a href="{slug}/{color}/front-print.svg">front SVG</a> &middot;
-          <a href="{slug}/{color}/back-print.svg">back SVG</a>{png_links}
+          Upload to your POD service (transparent, 12 in wide @ 300 dpi):
+          <a href="../prints/{slug}/{color}/front.svg">front SVG</a> &middot;
+          <a href="../prints/{slug}/{color}/back.svg">back SVG</a>{png_links}
         </p>
         <details>
           <summary>preview artwork (with shirt color filled)</summary>

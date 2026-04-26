@@ -19,6 +19,9 @@ For by grace you have been saved through faith. And this is not your own doing; 
 ### Romans 8:7-8
 For the mind that is set on the flesh is hostile to God, for it does not submit to God's law; indeed, it cannot. Those who are in the flesh cannot please God.
 
+### Galatians 5:17
+For the desires of the flesh are against the Spirit, and the desires of the Spirit are against the flesh.
+
 ### 1 Corinthians 12:3
 No one can say "Jesus is Lord" except in the Holy Spirit.
 
