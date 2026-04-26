@@ -11,32 +11,32 @@ back_heading: |
 ## Front
 
 ### John 6:44 {jesus}
-No one can come to me unless the Father who sent me draws him.
+No man can come to me, except the Father which hath sent me draw him.
 
 ### Ephesians 2:8-9
-For by grace you have been saved through faith. And this is not your own doing; it is the gift of God, not a result of works, so that no one may boast.
+For by grace are ye saved through faith; and that not of yourselves: it is the gift of God: not of works, lest any man should boast.
 
 ### Romans 8:7-8
-For the mind that is set on the flesh is hostile to God, for it does not submit to God's law; indeed, it cannot. Those who are in the flesh cannot please God.
+The carnal mind is enmity against God: for it is not subject to the law of God, neither indeed can be. They that are in the flesh cannot please God.
 
 ### Galatians 5:17
-For the desires of the flesh are against the Spirit, and the desires of the Spirit are against the flesh.
+For the flesh lusteth against the Spirit, and the Spirit against the flesh.
 
 ### 1 Corinthians 12:3
-No one can say "Jesus is Lord" except in the Holy Spirit.
+No man can say that Jesus is the Lord, but by the Holy Ghost.
 
 ### Closing
 Therefore...
 
 ## Back
 
-I believe that I cannot by my own reason or strength believe in Jesus Christ, my Lord, or come to him; but the Holy Spirit has called me by the gospel, enlightened me with his gifts, sanctified and kept me in the true faith.
+I believe that I cannot by my own reason or strength believe in Jesus Christ, my Lord, or come to Him; but the Holy Ghost has called me by the Gospel, enlightened me with His gifts, sanctified and kept me in the true faith;
 
-In the same way he calls, gathers, enlightens, and sanctifies the whole Christian church on earth, and keeps it with Jesus Christ in the one true faith.
+even as He calls, gathers, enlightens, and sanctifies the whole Christian Church on earth, and keeps it with Jesus Christ in the one true faith;
 
-In this Christian church he daily and richly forgives all my sins and the sins of all believers.
+in which Christian Church He forgives daily and richly all sins to me and all believers,
 
-On the last day he will raise me and all the dead, and give eternal life to me and all believers in Christ.
+and at the last day will raise up me and all the dead, and will give to me and to all believers in Christ everlasting life.
 
 ### Closing
 This is most certainly true.
