@@ -30,13 +30,11 @@ Therefore...
 
 ## Back
 
-I believe that I cannot by my own reason or strength believe in Jesus Christ, my Lord, or come to Him; but the Holy Ghost has called me by the Gospel, enlightened me with His gifts, sanctified and kept me in the true faith.
+I believe that I cannot by my own reason or strength believe in Jesus Christ, my Lord, or come to Him; but the Holy Ghost has called me by the Gospel, enlightened me with His gifts, sanctified and kept me in the true faith;
 
-Even as He calls, gathers, enlightens, and sanctifies the whole Christian Church on earth, and keeps it with Jesus Christ in the one true faith.
+even as He calls, gathers, enlightens, and sanctifies the whole Christian Church on earth, and keeps it with Jesus Christ in the one true faith;
 
-In this Christian Church He forgives daily and richly all sins to me and all believers.
-
-At the last day He will raise up me and all the dead, and give to me and to all believers in Christ everlasting life.
+in which Christian Church He forgives daily and richly all sins to me and all believers, and at the last day will raise up me and all the dead, and will give to me and to all believers in Christ everlasting life.
 
 ### Closing
 This is most certainly true.
