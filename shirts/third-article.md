@@ -2,8 +2,10 @@
 title: The Third Article
 slug: third-article
 colors: [black, gray]
-back_heading: The Third Article
-back_subheading: Sanctification
+front_heading: Dead in Sin
+back_heading: |
+  Alive in
+  the Spirit
 ---
 
 ## Front
@@ -16,6 +18,9 @@ For by grace you have been saved through faith. And this is not your own doing; 
 
 ### Romans 8:7-8
 For the mind that is set on the flesh is hostile to God, for it does not submit to God's law; indeed, it cannot. Those who are in the flesh cannot please God.
+
+### 1 Corinthians 12:3
+No one can say "Jesus is Lord" except in the Holy Spirit.
 
 ### Closing
 Therefore...
@@ -30,4 +35,5 @@ In this Christian church he daily and richly forgives all my sins and the sins o
 
 On the last day he will raise me and all the dead, and give eternal life to me and all believers in Christ.
 
+### Closing
 This is most certainly true.
