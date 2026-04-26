@@ -115,12 +115,19 @@ def parse_shirt(path: Path):
     return meta, sections
 
 
-def wrap_text(text: str, max_w: float, font_size: float, char_w: float = SERIF_CW) -> list[str]:
+def wrap_text(text: str, max_w: float, font_size: float, char_w: float = SERIF_CW,
+              min_last_words: int = 4) -> list[str]:
     words = text.split()
     if not words:
         return []
-    lines, cur, cur_w = [], [], 0.0
     space_w = font_size * char_w * 0.6
+
+    def line_w(ws: list[str]) -> float:
+        if not ws:
+            return 0.0
+        return sum(len(w) * font_size * char_w for w in ws) + (len(ws) - 1) * space_w
+
+    lines, cur, cur_w = [], [], 0.0
     for w in words:
         ww = len(w) * font_size * char_w
         add = ww if not cur else ww + space_w
@@ -132,6 +139,22 @@ def wrap_text(text: str, max_w: float, font_size: float, char_w: float = SERIF_C
             cur_w += add
     if cur:
         lines.append(" ".join(cur))
+
+    # Widow prevention: pull words up from the second-to-last line into the last
+    # line until it has at least min_last_words. Don't strip the prior line below
+    # 3 words, and don't push the last line past max_w.
+    if len(lines) >= 2:
+        prev_w = lines[-2].split()
+        last_w = lines[-1].split()
+        while len(last_w) < min_last_words and len(prev_w) > 3:
+            candidate = [prev_w[-1]] + last_w
+            if line_w(candidate) > max_w:
+                break
+            last_w = candidate
+            prev_w.pop()
+        lines[-2] = " ".join(prev_w)
+        lines[-1] = " ".join(last_w)
+
     return lines
 
 
