@@ -79,14 +79,20 @@ tees, `prints/<slug>/gray/` for gray) and upload both front and back.
 - Print area: 12 in wide. Most services cap height at ~16 in, so they will
   scale down — that's fine, just means even bigger headers in real life.
 
-PNG output requires `cairosvg` + the libcairo C library. On macOS:
-`brew install cairo pango libffi`. If unavailable, the build still produces
-SVGs and most POD services accept those.
+PNG output uses [`resvg-py`](https://pypi.org/project/resvg-py/) (a Python
+binding for the Rust `resvg` SVG renderer). It's listed as a script
+dependency, so `uv run build.py` installs it automatically. If it's
+unavailable for any reason the build still produces SVGs and most POD
+services accept those.
 
-For best font fidelity in PNGs, install [EB Garamond](https://fonts.google.com/specimen/EB+Garamond)
-and [Inter](https://fonts.google.com/specimen/Inter) on the rendering
-machine. SVGs reference these font names; if absent, system serif/sans
-fallbacks are used.
+EB Garamond and Inter (the design fonts) are bundled in `fonts/` and
+passed to resvg via `font_dirs=[fonts/]`, so PNG renders match the SVG
+without anyone having to install fonts on their system. The fonts ship
+under the [SIL Open Font License](fonts/OFL.txt).
+
+(Earlier the build used cairosvg, but cairo's "toy" font API ignores
+real font names — every font fell back to a generic serif. resvg-py
+handles fonts correctly.)
 
 ## Color palette
 

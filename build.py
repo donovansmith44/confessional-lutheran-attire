@@ -1,6 +1,6 @@
 # /// script
 # requires-python = ">=3.10"
-# dependencies = ["pyyaml", "cairosvg"]
+# dependencies = ["pyyaml", "resvg-py"]
 # ///
 """
 Build SVG artwork for confessional Lutheran shirt designs.
@@ -18,13 +18,17 @@ import sys
 from pathlib import Path
 import yaml
 
+# resvg-py renders SVG → PNG with proper @font-face / system font handling
+# (cairosvg can't — it uses cairo's "toy" font API which ignores real font
+# names). Bundled fonts live in fonts/ and are passed via font_dirs.
+_PROJECT_DIR = Path(__file__).parent.resolve()
+_FONTS_DIR = _PROJECT_DIR / "fonts"
+
 try:
-    import cairosvg
-    HAVE_CAIROSVG = True
-except (ImportError, OSError):
-    # cairosvg requires the libcairo C library at runtime; if it's not present
-    # we fall back to SVG-only output and tell the user how to fix it.
-    HAVE_CAIROSVG = False
+    import resvg_py
+    HAVE_PNG = True
+except ImportError:
+    HAVE_PNG = False
 
 ROOT = Path(__file__).parent
 SHIRTS_DIR = ROOT / "shirts"
@@ -472,31 +476,29 @@ def build_one(path: Path):
         (prints_dir / "front.svg").write_text(front_print_svg)
         (prints_dir / "back.svg").write_text(back_print_svg)
 
-        if HAVE_CAIROSVG:
-            cairosvg.svg2png(
-                bytestring=front_print_svg.encode("utf-8"),
-                write_to=str(prints_dir / "front.png"),
-                output_width=CANVAS_W, output_height=front_h,
-            )
-            cairosvg.svg2png(
-                bytestring=back_print_svg.encode("utf-8"),
-                write_to=str(prints_dir / "back.png"),
-                output_width=CANVAS_W, output_height=back_h,
-            )
+        if HAVE_PNG:
+            font_dirs = [str(_FONTS_DIR)] if _FONTS_DIR.exists() else None
+            (prints_dir / "front.png").write_bytes(bytes(resvg_py.svg_to_bytes(
+                svg_string=front_print_svg, font_dirs=font_dirs,
+                width=CANVAS_W, height=front_h,
+            )))
+            (prints_dir / "back.png").write_bytes(bytes(resvg_py.svg_to_bytes(
+                svg_string=back_print_svg, font_dirs=font_dirs,
+                width=CANVAS_W, height=back_h,
+            )))
 
         print(f"  - {color}: preview→{out_dir.relative_to(ROOT)}  prints→{prints_dir.relative_to(ROOT)}")
     return slug, colors, meta["title"]
 
 
 def write_preview(designs):
-    png_note = "" if HAVE_CAIROSVG else " <em>(PNG not generated — install cairosvg + libcairo)</em>"
     cards = []
     for slug, colors, title in designs:
         for color in colors:
             png_links = (
                 f' &middot; <a href="../prints/{slug}/{color}/front.png">front PNG</a>'
                 f' &middot; <a href="../prints/{slug}/{color}/back.png">back PNG</a>'
-            ) if HAVE_CAIROSVG else ""
+            ) if HAVE_PNG else ""
             cards.append(f'''      <section class="design">
         <h2>{escape(title)} — <span class="meta">{color}</span></h2>
         <div class="pair">
@@ -565,10 +567,10 @@ def main():
     designs = [build_one(t) for t in targets]
     write_preview(designs)
     print(f"\nPreview: open {OUTPUT_DIR.relative_to(ROOT)}/preview.html")
-    if not HAVE_CAIROSVG:
+    if not HAVE_PNG:
         print(
-            "\nNote: PNG output skipped (cairosvg / libcairo not available).\n"
-            "      To enable PNG generation: brew install cairo pango libffi\n"
+            "\nNote: PNG output skipped (resvg-py not available).\n"
+            "      Install with: uv pip install resvg-py\n"
             "      Most POD services accept the SVG directly anyway."
         )
 
