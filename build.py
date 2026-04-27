@@ -59,9 +59,11 @@ PALETTES = {
 
 SERIF = "'EB Garamond', 'Garamond', 'Hoefler Text', 'Times New Roman', serif"
 SANS = "'Inter', 'Helvetica Neue', 'Arial', sans-serif"
+TITLE_FAMILY = "'Archivo Black', 'Inter', 'Helvetica Neue', 'Arial Black', sans-serif"
 
 SERIF_CW = 0.48
 SANS_CW = 0.52
+TITLE_CW = 0.58  # Archivo Black is heavier and wider per char than Inter
 
 
 def parse_shirt(path: Path):
@@ -191,7 +193,7 @@ def title_lines(text: str, max_w: float) -> list[str]:
     for ln in (text or "").split("\n"):
         ln = ln.strip()
         if ln:
-            lines.extend(wrap_text(ln.upper(), max_w, TITLE_FONT, SANS_CW))
+            lines.extend(wrap_text(ln.upper(), max_w, TITLE_FONT, TITLE_CW))
     return lines
 
 
@@ -218,7 +220,7 @@ def render_front_layout(meta, blocks, palette, with_bg=True):
         t_lines = title_lines(front_heading, max_w)
         svg, end_y = text_block(
             cx, y, t_lines, TITLE_FONT, palette["body"],
-            family=SANS, weight="900", letter_spacing=14,
+            family=TITLE_FAMILY, weight="900", letter_spacing=8,
         )
         content.append(svg)
         y = end_y + TITLE_FONT * 0.95  # space below title (no rule line)
@@ -280,7 +282,7 @@ def render_back_layout(meta, blocks, palette, with_bg=True):
     h_lines = title_lines(heading, max_w)
     svg, end_y = text_block(
         cx, y, h_lines, TITLE_FONT, palette["body"],
-        family=SANS, weight="900", letter_spacing=14,
+        family=TITLE_FAMILY, weight="900", letter_spacing=8,
     )
     content.append(svg)
     y = end_y + TITLE_FONT * 0.95  # space below title (no rule line)
@@ -346,7 +348,7 @@ def render_back(meta, blocks, palette):
 # Print box width is fixed; height is computed per-design from the canvas height
 # returned by the layout function (so each shirt's print box matches its design).
 MOCKUP_W, MOCKUP_H = 800, 880
-PRINT_X, PRINT_Y, PRINT_W = 255, 200, 290
+PRINT_X, PRINT_Y, PRINT_W = 255, 285, 290  # PRINT_Y bumped down so the header doesn't sit on the collar
 
 
 def shirt_path(side: str) -> str:
@@ -399,8 +401,11 @@ def render_mockup(meta, sections, color, side):
     else:
         inner, design_h = render_back_layout(meta, sections.get("Back", []), palette, with_bg=False)
 
-    # cap the print box so very tall designs don't overflow the shirt body
-    print_h = min(PRINT_W * design_h / CANVAS_W, MOCKUP_H - PRINT_Y - 200)
+    # let print box match the design's natural aspect; clamp only if it would
+    # push past the shirt hem.
+    natural_h = PRINT_W * design_h / CANVAS_W
+    max_h = MOCKUP_H - PRINT_Y - 130  # leave room above the hem
+    print_h = min(natural_h, max_h)
     inner_str = "\n      ".join(inner)
     backdrop = "#1d1d1d"
     # subtle vertical shading on the shirt fabric for a hint of depth
