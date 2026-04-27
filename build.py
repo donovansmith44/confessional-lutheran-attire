@@ -209,10 +209,10 @@ def render_front_layout(meta, blocks, palette, with_bg=True):
     front_heading = meta.get("front_heading", "")
 
     # font sizes are in px (= svg user units); divide by ~4.17 for points.
-    # 500 ≈ 120pt, 195 ≈ 47pt, 240 ≈ 58pt.
+    # 500 ≈ 120pt, 195 ≈ 47pt, 320 ≈ 77pt.
     verse_font = 195
     cite_font = 78
-    closing_font = 240
+    closing_font = 320
 
     content: list[str] = []
     # Optional transparent padding at the top of the canvas — pushes the whole
@@ -263,7 +263,7 @@ def render_front_layout(meta, blocks, palette, with_bg=True):
 
     if closing:
         para = " ".join(closing["paragraphs"])
-        y = last_y + closing_font * 1.35  # snug gap so "Therefore..." stays near verses
+        y = last_y + closing_font * 0.95  # snug gap so "Therefore..." stays near verses
         lines = wrap_text(para, max_w, closing_font, SERIF_CW)
         svg, end_y = text_block(cx, y, lines, closing_font, palette["body"], style="italic")
         content.append(svg)
@@ -324,9 +324,9 @@ def render_back_layout(meta, blocks, palette, with_bg=True):
             y = end_y + body_font * 1.65  # extra paragraph separation
 
     if closing:
-        closing_font = 220
+        closing_font = 250  # max that keeps "This is most certainly true." on one line
         para = " ".join(closing["paragraphs"])
-        y = last_y + closing_font * 1.35
+        y = last_y + closing_font * 0.95
         lines = wrap_text(para, max_w, closing_font, SERIF_CW)
         svg, end_y = text_block(cx, y, lines, closing_font, palette["body"], style="italic")
         content.append(svg)
