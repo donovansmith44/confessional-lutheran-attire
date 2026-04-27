@@ -202,17 +202,20 @@ BOTTOM_MARGIN = 280  # whitespace below the last element in a side
 
 def render_front_layout(meta, blocks, palette, with_bg=True):
     """Render the front design. Returns (parts, canvas_height)."""
-    pad_x = 60  # narrower side margins → wider lines so bigger text doesn't add lines
+    pad_x = 20  # use almost the full canvas width; ~0.07" margin each side at 300dpi
     cx = CANVAS_W // 2
     max_w = CANVAS_W - 2 * pad_x
 
     front_heading = meta.get("front_heading", "")
 
     # font sizes are in px (= svg user units); divide by ~4.17 for points.
-    # 500 ≈ 120pt, 195 ≈ 47pt, 320 ≈ 77pt.
-    verse_font = 195
-    cite_font = 78
-    closing_font = 320
+    # 500 ≈ 120pt, 200 ≈ 48pt, 240 ≈ 58pt.
+    # 200 is the largest verse_font where John 6:44 still fits in 3 lines at
+    # pad_x=20 (max_w=3560). Going larger adds a line and the resulting taller
+    # canvas gets scaled down at Printful's 16" cap — net effect zero.
+    verse_font = 200
+    cite_font = 80
+    closing_font = 240
 
     content: list[str] = []
     # Optional transparent padding at the top of the canvas — pushes the whole
@@ -263,7 +266,7 @@ def render_front_layout(meta, blocks, palette, with_bg=True):
 
     if closing:
         para = " ".join(closing["paragraphs"])
-        y = last_y + closing_font * 0.95  # snug gap so "Therefore..." stays near verses
+        y = last_y + closing_font * 1.35  # snug gap so "Therefore..." stays near verses
         lines = wrap_text(para, max_w, closing_font, SERIF_CW)
         svg, end_y = text_block(cx, y, lines, closing_font, palette["body"], style="italic")
         content.append(svg)
@@ -279,13 +282,13 @@ def render_front_layout(meta, blocks, palette, with_bg=True):
 
 def render_back_layout(meta, blocks, palette, with_bg=True):
     """Render the back design. Returns (parts, canvas_height)."""
-    pad_x = 60  # narrower side margins → wider lines so bigger text doesn't add lines
+    pad_x = 20  # use almost the full canvas width; ~0.07" margin each side at 300dpi
     cx = CANVAS_W // 2
     max_w = CANVAS_W - 2 * pad_x
 
     heading = meta.get("back_heading") or meta.get("title", "")
     sub = meta.get("back_subheading", "")
-    body_font = 175
+    body_font = 180  # 178-180 is the cliff; above that Para 3 wraps to a 6th line
 
     content: list[str] = []
     y = TITLE_Y + int(meta.get("back_top_padding", 0))
@@ -324,9 +327,9 @@ def render_back_layout(meta, blocks, palette, with_bg=True):
             y = end_y + body_font * 1.65  # extra paragraph separation
 
     if closing:
-        closing_font = 250  # max that keeps "This is most certainly true." on one line
+        closing_font = 220
         para = " ".join(closing["paragraphs"])
-        y = last_y + closing_font * 0.95
+        y = last_y + closing_font * 1.35
         lines = wrap_text(para, max_w, closing_font, SERIF_CW)
         svg, end_y = text_block(cx, y, lines, closing_font, palette["body"], style="italic")
         content.append(svg)

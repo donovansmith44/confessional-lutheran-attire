@@ -24,9 +24,6 @@ For by grace are ye saved through faith; and that not of yourselves: it is the g
 ### Romans 8:7-8
 Because the carnal mind is enmity against God: for it is not subject to the law of God, neither indeed can be. So then they that are in the flesh cannot please God.
 
-### Galatians 5:17
-For the flesh lusteth against the Spirit, and the Spirit against the flesh…
-
 ### 1 Corinthians 12:3
 …no man can say that Jesus is the Lord, but by the Holy Ghost.
 
