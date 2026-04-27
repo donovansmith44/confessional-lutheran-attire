@@ -202,16 +202,16 @@ BOTTOM_MARGIN = 280  # whitespace below the last element in a side
 
 def render_front_layout(meta, blocks, palette, with_bg=True):
     """Render the front design. Returns (parts, canvas_height)."""
-    pad_x = 200
+    pad_x = 60  # narrower side margins → wider lines so bigger text doesn't add lines
     cx = CANVAS_W // 2
     max_w = CANVAS_W - 2 * pad_x
 
     front_heading = meta.get("front_heading", "")
 
     # font sizes are in px (= svg user units); divide by ~4.17 for points.
-    # 500 ≈ 120pt, 180 ≈ 43pt, 240 ≈ 58pt.
-    verse_font = 180
-    cite_font = 72
+    # 500 ≈ 120pt, 195 ≈ 47pt, 240 ≈ 58pt.
+    verse_font = 195
+    cite_font = 78
     closing_font = 240
 
     content: list[str] = []
@@ -259,11 +259,11 @@ def render_front_layout(meta, blocks, palette, with_bg=True):
         content.append(cs)
         last_y = end_y
         if i < len(verse_blocks) - 1:
-            y = end_y + verse_font * 1.55  # gap between verses
+            y = end_y + verse_font * 1.3  # gap between verses
 
     if closing:
         para = " ".join(closing["paragraphs"])
-        y = last_y + closing_font * 1.6  # snug gap so "Therefore..." stays near verses
+        y = last_y + closing_font * 1.35  # snug gap so "Therefore..." stays near verses
         lines = wrap_text(para, max_w, closing_font, SERIF_CW)
         svg, end_y = text_block(cx, y, lines, closing_font, palette["body"], style="italic")
         content.append(svg)
@@ -279,13 +279,13 @@ def render_front_layout(meta, blocks, palette, with_bg=True):
 
 def render_back_layout(meta, blocks, palette, with_bg=True):
     """Render the back design. Returns (parts, canvas_height)."""
-    pad_x = 200
+    pad_x = 60  # narrower side margins → wider lines so bigger text doesn't add lines
     cx = CANVAS_W // 2
     max_w = CANVAS_W - 2 * pad_x
 
     heading = meta.get("back_heading") or meta.get("title", "")
     sub = meta.get("back_subheading", "")
-    body_font = 160
+    body_font = 175
 
     content: list[str] = []
     y = TITLE_Y + int(meta.get("back_top_padding", 0))
@@ -321,12 +321,12 @@ def render_back_layout(meta, blocks, palette, with_bg=True):
             svg, end_y = text_block(cx, y, lines, body_font, palette["body"])
             content.append(svg)
             last_y = end_y
-            y = end_y + body_font * 1.95  # extra paragraph separation
+            y = end_y + body_font * 1.65  # extra paragraph separation
 
     if closing:
         closing_font = 220
         para = " ".join(closing["paragraphs"])
-        y = last_y + closing_font * 1.6
+        y = last_y + closing_font * 1.35
         lines = wrap_text(para, max_w, closing_font, SERIF_CW)
         svg, end_y = text_block(cx, y, lines, closing_font, palette["body"], style="italic")
         content.append(svg)
