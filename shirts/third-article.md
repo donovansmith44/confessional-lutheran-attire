@@ -11,19 +11,19 @@ back_heading: |
 ## Front
 
 ### John 6:44 {jesus}
-No man can come to me, except the Father which hath sent me draw him.
+No man can come to me, except the Father which hath sent me draw him: and I will raise him up at the last day.
 
 ### Ephesians 2:8-9
-For by grace are ye saved through faith; and that not of yourselves: it is the gift of God: not of works, lest any man should boast.
+For by grace are ye saved through faith; and that not of yourselves: it is the gift of God: Not of works, lest any man should boast.
 
 ### Romans 8:7-8
-The carnal mind is enmity against God: for it is not subject to the law of God, neither indeed can be. They that are in the flesh cannot please God.
+Because the carnal mind is enmity against God: for it is not subject to the law of God, neither indeed can be. So then they that are in the flesh cannot please God.
 
 ### Galatians 5:17
-For the flesh lusteth against the Spirit, and the Spirit against the flesh.
+For the flesh lusteth against the Spirit, and the Spirit against the flesh…
 
 ### 1 Corinthians 12:3
-No man can say that Jesus is the Lord, but by the Holy Ghost.
+…no man can say that Jesus is the Lord, but by the Holy Ghost.
 
 ### Closing
 Therefore...
