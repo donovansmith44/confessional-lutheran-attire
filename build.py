@@ -223,7 +223,14 @@ def render_front_layout(meta, blocks, palette, with_bg=True):
             family=TITLE_FAMILY, weight="900", letter_spacing=8,
         )
         content.append(svg)
-        y = end_y + TITLE_FONT * 0.95  # space below title (no rule line)
+        rule_y = end_y + TITLE_FONT * 0.5
+        rule_w = 320
+        content.append(
+            f'<line x1="{cx - rule_w // 2}" y1="{rule_y}" '
+            f'x2="{cx + rule_w // 2}" y2="{rule_y}" '
+            f'stroke="{palette["rule"]}" stroke-width="3" stroke-opacity="0.7"/>'
+        )
+        y = rule_y + TITLE_FONT * 0.5
 
     verse_blocks = [b for b in blocks if (b["heading"] or "").lower() != "closing"]
     closing = next((b for b in blocks if (b["heading"] or "").lower() == "closing"), None)
@@ -285,7 +292,14 @@ def render_back_layout(meta, blocks, palette, with_bg=True):
         family=TITLE_FAMILY, weight="900", letter_spacing=8,
     )
     content.append(svg)
-    y = end_y + TITLE_FONT * 0.95  # space below title (no rule line)
+    rule_y = end_y + TITLE_FONT * 0.5
+    rule_w = 320
+    content.append(
+        f'<line x1="{cx - rule_w // 2}" y1="{rule_y}" '
+        f'x2="{cx + rule_w // 2}" y2="{rule_y}" '
+        f'stroke="{palette["rule"]}" stroke-width="3" stroke-opacity="0.7"/>'
+    )
+    y = rule_y + TITLE_FONT * 0.5
 
     if sub:
         s_font = 96
