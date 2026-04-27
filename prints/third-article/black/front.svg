@@ -2,7 +2,7 @@
 <text x="1800" y="540" fill="#f4f1ea" font-family="'Archivo Black', 'Inter', 'Helvetica Neue', 'Arial Black', sans-serif" font-size="500" font-weight="900" font-style="normal" text-anchor="middle" letter-spacing="8">
 <tspan x="1800" dy="0">DEAD IN SIN</tspan>
 </text>
-<line x1="1640" y1="790.0" x2="1960" y2="790.0" stroke="#3a3733" stroke-width="3" stroke-opacity="0.7"/>
+<line x1="1560" y1="790.0" x2="2040" y2="790.0" stroke="#f4f1ea" stroke-width="7"/>
 <text x="1800" y="1040.0" fill="#e63946" font-family="'EB Garamond', 'Garamond', 'Hoefler Text', 'Times New Roman', serif" font-size="180" font-weight="normal" font-style="normal" text-anchor="middle" letter-spacing="0">
 <tspan x="1800" dy="0">“No man can come to me, except the</tspan>
 <tspan x="1800" dy="219.6">Father which hath sent me draw him.”</tspan>

@@ -224,11 +224,11 @@ def render_front_layout(meta, blocks, palette, with_bg=True):
         )
         content.append(svg)
         rule_y = end_y + TITLE_FONT * 0.5
-        rule_w = 320
+        rule_w = 480
         content.append(
             f'<line x1="{cx - rule_w // 2}" y1="{rule_y}" '
             f'x2="{cx + rule_w // 2}" y2="{rule_y}" '
-            f'stroke="{palette["rule"]}" stroke-width="3" stroke-opacity="0.7"/>'
+            f'stroke="{palette["body"]}" stroke-width="7"/>'
         )
         y = rule_y + TITLE_FONT * 0.5
 
@@ -293,11 +293,11 @@ def render_back_layout(meta, blocks, palette, with_bg=True):
     )
     content.append(svg)
     rule_y = end_y + TITLE_FONT * 0.5
-    rule_w = 320
+    rule_w = 480
     content.append(
         f'<line x1="{cx - rule_w // 2}" y1="{rule_y}" '
         f'x2="{cx + rule_w // 2}" y2="{rule_y}" '
-        f'stroke="{palette["rule"]}" stroke-width="3" stroke-opacity="0.7"/>'
+        f'stroke="{palette["body"]}" stroke-width="7"/>'
     )
     y = rule_y + TITLE_FONT * 0.5
 
