@@ -218,7 +218,7 @@ def render_front_layout(meta, blocks, palette, with_bg=True):
         t_lines = title_lines(front_heading, max_w)
         svg, end_y = text_block(
             cx, y, t_lines, TITLE_FONT, palette["body"],
-            family=SANS, weight="800", letter_spacing=18,
+            family=SANS, weight="900", letter_spacing=14,
         )
         content.append(svg)
         y = end_y + TITLE_FONT * 0.95  # space below title (no rule line)
@@ -280,7 +280,7 @@ def render_back_layout(meta, blocks, palette, with_bg=True):
     h_lines = title_lines(heading, max_w)
     svg, end_y = text_block(
         cx, y, h_lines, TITLE_FONT, palette["body"],
-        family=SANS, weight="800", letter_spacing=18,
+        family=SANS, weight="900", letter_spacing=14,
     )
     content.append(svg)
     y = end_y + TITLE_FONT * 0.95  # space below title (no rule line)
