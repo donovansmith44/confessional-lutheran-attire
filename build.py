@@ -240,8 +240,7 @@ def render_front_layout(meta, blocks, palette, with_bg=True):
         is_jesus = "jesus" in b["tags"]
         color = palette["jesus"] if is_jesus else palette["body"]
         para = " ".join(b["paragraphs"])
-        if is_jesus:
-            para = f"“{para}”"
+        para = f"“{para}”"
         lines = wrap_text(para, max_w, verse_font, SERIF_CW)
         svg, end_y = text_block(cx, y, lines, verse_font, color)
         content.append(svg)
