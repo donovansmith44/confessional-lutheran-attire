@@ -215,7 +215,11 @@ def render_front_layout(meta, blocks, palette, with_bg=True):
     closing_font = 240
 
     content: list[str] = []
-    y = TITLE_Y
+    # Optional transparent padding at the top of the canvas — pushes the whole
+    # design lower on the shirt for PODs (like Printful) that anchor uploads at
+    # the top of the print area. Set front_top_padding in the markdown
+    # frontmatter (in svg user units = px @ 300dpi; e.g. 1500 ≈ 5 inches).
+    y = TITLE_Y + int(meta.get("front_top_padding", 0))
     if front_heading:
         t_lines = title_lines(front_heading, max_w)
         svg, end_y = text_block(
@@ -284,7 +288,7 @@ def render_back_layout(meta, blocks, palette, with_bg=True):
     body_font = 160
 
     content: list[str] = []
-    y = TITLE_Y
+    y = TITLE_Y + int(meta.get("back_top_padding", 0))
     h_lines = title_lines(heading, max_w)
     svg, end_y = text_block(
         cx, y, h_lines, TITLE_FONT, palette["body"],

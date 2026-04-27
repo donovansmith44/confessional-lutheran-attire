@@ -6,6 +6,11 @@ front_heading: Dead in Sin
 back_heading: |
   Alive in
   the Spirit
+# Push the design lower on the shirt for POD services that anchor uploads at
+# the top of the print area (e.g. Printful). Units are svg user units (px @
+# 300dpi); 900 ≈ 3 inches, 1500 ≈ 5 inches. Tweak per side.
+front_top_padding: 1200
+back_top_padding: 1200
 ---
 
 ## Front
