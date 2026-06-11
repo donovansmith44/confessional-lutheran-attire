@@ -3,3 +3,5 @@ output/
 __pycache__/
 *.pyc
 .venv/
+# RSVP form export — contains personal data (names, emails, phone numbers)
+submissions.csv
