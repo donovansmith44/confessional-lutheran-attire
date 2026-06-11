@@ -1,15 +1,13 @@
 ---
-title: Dead in Sin
-slug: dead-in-sin
+title: Dead in Sin (v2)
+slug: dead-in-sin-v2
 colors: [black, gray]
 front_heading: Dead in Sin
 back_heading: |
   Alive in
   the Spirit
-# Illustration behind the front. Black-on-white line art; the build recolors it
-# to the shirt's ink and knocks the white out to transparent, so one drawing
-# serves every shirt color.
-front_image: calvary-hires.png
+# v2 front: Calvary with the broken/dashed light rays (matches the tomb back).
+front_image: calvary-good-rays-hires.png
 # Lay the verse + closing over the open sky at the top of the art instead of
 # stacking them beneath it (keeps the design compact so it prints larger).
 front_overlay: true

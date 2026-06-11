@@ -249,13 +249,13 @@ TITLE_Y = 540
 TITLE_FONT = 500  # ~1.7" tall on the print — readable across a room
 
 
-def title_lines(text: str, max_w: float) -> list[str]:
+def title_lines(text: str, max_w: float, font: float = TITLE_FONT) -> list[str]:
     """Split a heading on YAML newlines (manual breaks) and auto-wrap each chunk."""
     lines: list[str] = []
     for ln in (text or "").split("\n"):
         ln = ln.strip()
         if ln:
-            lines.extend(wrap_text(ln.upper(), max_w, TITLE_FONT, TITLE_CW))
+            lines.extend(wrap_text(ln.upper(), max_w, font, TITLE_CW))
     return lines
 
 
@@ -469,22 +469,24 @@ def render_back_image_layout(meta, blocks, palette, with_bg=True):
     content: list[str] = []
     y = TITLE_Y + int(meta.get("back_top_padding", 0))
 
-    # headline + rule
+    # headline + rule (back_heading_font lets the back title run larger than the
+    # global TITLE_FONT to use more of the print width)
     heading = meta.get("back_heading") or meta.get("title", "")
-    h_lines = title_lines(heading, max_w)
+    head_font = int(meta.get("back_heading_font", TITLE_FONT))
+    h_lines = title_lines(heading, max_w, head_font)
     svg, end_y = text_block(
-        cx, y, h_lines, TITLE_FONT, ink,
+        cx, y, h_lines, head_font, ink,
         family=TITLE_FAMILY, weight="900", letter_spacing=8,
     )
     content.append(svg)
-    rule_y = end_y + TITLE_FONT * 0.5
+    rule_y = end_y + head_font * 0.5
     rule_w = 480
     content.append(
         f'<line x1="{cx - rule_w // 2}" y1="{rule_y}" '
         f'x2="{cx + rule_w // 2}" y2="{rule_y}" '
         f'stroke="{ink}" stroke-width="7"/>'
     )
-    y = rule_y + TITLE_FONT * 0.5
+    y = rule_y + head_font * 0.5
 
     # illustration: fill the print width
     frac = float(meta.get("back_image_width", 1.0))
