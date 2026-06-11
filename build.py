@@ -1,6 +1,6 @@
 # /// script
 # requires-python = ">=3.10"
-# dependencies = ["pyyaml", "resvg-py"]
+# dependencies = ["pyyaml", "resvg-py", "pillow"]
 # ///
 """
 Build SVG artwork for confessional Lutheran shirt designs.
@@ -13,10 +13,18 @@ Reads each markdown file in shirts/ and writes:
 Run: uv run build.py            # build every design
      uv run build.py third-article    # build one design
 """
+import base64
+import io
 import re
 import sys
 from pathlib import Path
 import yaml
+
+try:
+    from PIL import Image
+    HAVE_PIL = True
+except ImportError:
+    HAVE_PIL = False
 
 # resvg-py renders SVG → PNG with proper @font-face / system font handling
 # (cairosvg can't — it uses cairo's "toy" font API which ignores real font
@@ -168,12 +176,59 @@ def escape(s: str) -> str:
     return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
-def text_block(x, y, lines, size, color, family=SERIF, weight="normal", style="normal", anchor="middle", letter_spacing=0):
+def _hex_to_rgb(h: str) -> tuple[int, int, int]:
+    h = h.lstrip("#")
+    return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))  # type: ignore[return-value]
+
+
+# Cache so we don't re-encode the same (path, ink) on every color/side pass.
+_IMG_CACHE: dict[tuple[str, str], tuple[str, int, int]] = {}
+
+
+def image_layer(path: Path, ink: str) -> tuple[str, int, int]:
+    """Load a black-on-white line-art PNG, recolor every dark pixel to `ink`
+    and turn white into transparency (alpha = darkness). Returns
+    (data_uri, width, height). This is what makes one drawing reusable across
+    shirt colors: the same art is tinted to the shirt's body color and inverts
+    automatically (light on black, dark on gray)."""
+    key = (str(path), ink)
+    if key in _IMG_CACHE:
+        return _IMG_CACHE[key]
+    lum = Image.open(path).convert("L")
+    w, h = lum.size
+    r, g, b = _hex_to_rgb(ink)
+    alpha = lum.point(lambda v: 255 - v)          # dark ink → opaque, white → clear
+    out = Image.new("RGBA", (w, h), (r, g, b, 0))
+    out.putalpha(alpha)
+    # Trim the surrounding empty margin so the drawing itself fills the space it
+    # is given on the shirt (the source art often has whitespace below/around it).
+    # Threshold first so faint near-white specks at the edges don't defeat the
+    # crop — only solid ink counts toward the bounding box.
+    solid = alpha.point(lambda v: 255 if v > 40 else 0)
+    bbox = solid.getbbox()
+    if bbox:
+        out = out.crop(bbox)
+        w, h = out.size
+    buf = io.BytesIO()
+    out.save(buf, format="PNG")
+    uri = "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode("ascii")
+    result = (uri, w, h)
+    _IMG_CACHE[key] = result
+    return result
+
+
+def text_block(x, y, lines, size, color, family=SERIF, weight="normal", style="normal", anchor="middle", letter_spacing=0, stroke_w=0):
     line_h = size * 1.22
+    # A same-color stroke fattens the glyphs slightly — a reliable faux-bold that
+    # works under resvg even when the variable font's weight axis is ignored.
+    stroke = (
+        f'stroke="{color}" stroke-width="{stroke_w}" paint-order="stroke" '
+        if stroke_w else ""
+    )
     parts = [
         f'<text x="{x}" y="{y}" fill="{color}" font-family="{family}" '
         f'font-size="{size}" font-weight="{weight}" font-style="{style}" '
-        f'text-anchor="{anchor}" letter-spacing="{letter_spacing}">'
+        f'{stroke}text-anchor="{anchor}" letter-spacing="{letter_spacing}">'
     ]
     for i, ln in enumerate(lines):
         dy = 0 if i == 0 else line_h
@@ -200,8 +255,112 @@ def title_lines(text: str, max_w: float) -> list[str]:
 BOTTOM_MARGIN = 280  # whitespace below the last element in a side
 
 
+def render_front_image_layout(meta, blocks, palette, with_bg=True):
+    """Front layout for designs with a `front_image:` illustration: headline at
+    the top, the artwork filling the full print width beneath it, then the
+    verse(s) and closing stacked below. Width is fixed at 12 in; height grows to
+    fit (the POD service scales to its 16 in cap, same as the text-only shirts).
+
+    `front_image_width` (0-1, default 1.0) trims the art's share of the width."""
+    pad_x = 20
+    cx = CANVAS_W // 2
+    max_w = CANVAS_W - 2 * pad_x
+    ink = palette["body"]
+
+    content: list[str] = []
+    y = TITLE_Y + int(meta.get("front_top_padding", 0))
+
+    # headline + rule (same treatment as the text-only front)
+    front_heading = meta.get("front_heading", "")
+    t_lines = title_lines(front_heading, max_w)
+    svg, end_y = text_block(
+        cx, y, t_lines, TITLE_FONT, ink,
+        family=TITLE_FAMILY, weight="900", letter_spacing=8,
+    )
+    content.append(svg)
+    rule_y = end_y + TITLE_FONT * 0.5
+    rule_w = 480
+    content.append(
+        f'<line x1="{cx - rule_w // 2}" y1="{rule_y}" '
+        f'x2="{cx + rule_w // 2}" y2="{rule_y}" '
+        f'stroke="{ink}" stroke-width="7"/>'
+    )
+    y = rule_y + TITLE_FONT * 0.5
+
+    # illustration: fill the print width (uses all the horizontal real estate)
+    frac = float(meta.get("front_image_width", 1.0))
+    uri, iw, ih = image_layer((ROOT / meta["front_image"]).resolve(), ink)
+    img_w = max_w * frac
+    img_h = img_w * (ih / iw)
+    img_x = cx - img_w / 2
+    img_y = y + 140
+    content.append(
+        f'<image x="{img_x:.1f}" y="{img_y:.1f}" '
+        f'width="{img_w:.1f}" height="{img_h:.1f}" '
+        f'href="{uri}" xlink:href="{uri}" '
+        f'preserveAspectRatio="xMidYMid meet"/>'
+    )
+    # verse(s) + closing: either stacked beneath the art, or — when
+    # `front_overlay` is set — composited over the open sky at the top of the
+    # artwork (no extra height, so the design stays compact and prints larger).
+    overlay = bool(meta.get("front_overlay"))
+    verse_font = int(meta.get("front_verse_font", 160 if overlay else 200))
+    cite_font = 70 if overlay else 80
+    closing_font = int(meta.get("front_closing_font", 175 if overlay else 240))
+    verse_stroke = float(meta.get("front_verse_bold", 2.6 if overlay else 0))
+    hide_cite = bool(meta.get("front_hide_citation"))
+    closing_gap = float(meta.get("front_closing_gap", 1.15 if overlay else 1.35))
+    verse_blocks = [b for b in blocks if (b["heading"] or "").lower() != "closing"]
+    closing = next((b for b in blocks if (b["heading"] or "").lower() == "closing"), None)
+
+    if overlay:
+        y = img_y + img_h * float(meta.get("front_overlay_top", 0.03))
+    else:
+        y = img_y + img_h + verse_font * 1.4
+
+    last_y = y
+    for i, b in enumerate(verse_blocks):
+        color = palette["jesus"] if "jesus" in b["tags"] else palette["body"]
+        para = "“" + " ".join(b["paragraphs"]) + "”"
+        lines = wrap_text(para, max_w, verse_font, SERIF_CW)
+        svg, end_y = text_block(cx, y, lines, verse_font, color, stroke_w=verse_stroke)
+        content.append(svg)
+        last_y = end_y
+
+        if not hide_cite:
+            y = end_y + cite_font * 1.6
+            cite = b["heading"].upper() if b["heading"] else ""
+            cl = wrap_text(cite, max_w, cite_font, SANS_CW)
+            cs, end_y = text_block(
+                cx, y, cl, cite_font, palette["citation"],
+                family=SANS, weight="600", letter_spacing=10,
+            )
+            content.append(cs)
+            last_y = end_y
+        if i < len(verse_blocks) - 1:
+            y = end_y + verse_font * 1.3
+
+    if closing:
+        para = " ".join(closing["paragraphs"])
+        y = last_y + closing_font * closing_gap
+        lines = wrap_text(para, max_w, closing_font, SERIF_CW)
+        svg, end_y = text_block(cx, y, lines, closing_font, palette["body"], style="italic")
+        content.append(svg)
+        last_y = end_y
+
+    bottom = (img_y + img_h) if overlay else last_y
+    height = int(bottom + BOTTOM_MARGIN)
+    parts: list[str] = []
+    if with_bg:
+        parts.append(f'<rect width="{CANVAS_W}" height="{height}" fill="{palette["bg"]}"/>')
+    parts.extend(content)
+    return parts, height
+
+
 def render_front_layout(meta, blocks, palette, with_bg=True):
     """Render the front design. Returns (parts, canvas_height)."""
+    if meta.get("front_image") and HAVE_PIL:
+        return render_front_image_layout(meta, blocks, palette, with_bg)
     pad_x = 20  # use almost the full canvas width; ~0.07" margin each side at 300dpi
     cx = CANVAS_W // 2
     max_w = CANVAS_W - 2 * pad_x
@@ -433,7 +592,9 @@ def render_mockup(meta, sections, color, side):
     highlight_alpha = 0.12 if color == "black" else 0.08
     shadow_alpha = 0.22 if color == "black" else 0.18
     return (
-        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {MOCKUP_W} {MOCKUP_H}" '
+        f'<svg xmlns="http://www.w3.org/2000/svg" '
+        f'xmlns:xlink="http://www.w3.org/1999/xlink" '
+        f'viewBox="0 0 {MOCKUP_W} {MOCKUP_H}" '
         f'width="{MOCKUP_W}" height="{MOCKUP_H}">\n'
         f'  <defs>\n'
         f'    <linearGradient id="{shade_id}" x1="0" y1="0" x2="0" y2="1">\n'
@@ -465,6 +626,7 @@ def wrap_svg(parts, height=None):
     body = "\n".join(parts)
     return (
         f'<svg xmlns="http://www.w3.org/2000/svg" '
+        f'xmlns:xlink="http://www.w3.org/1999/xlink" '
         f'viewBox="0 0 {CANVAS_W} {h}" '
         f'width="{CANVAS_W}" height="{h}">\n{body}\n</svg>\n'
     )
