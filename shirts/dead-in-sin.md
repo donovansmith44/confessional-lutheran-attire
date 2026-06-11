@@ -14,8 +14,16 @@ front_image: calvary.png
 # stacking them beneath it (keeps the design compact so it prints larger).
 front_overlay: true
 front_hide_citation: true
+front_verse_raise_frac: 0.25
 front_top_padding: 0
-back_top_padding: 1200
+# Open-tomb illustration behind the back, broken light rays from the doorway.
+back_image: tomb-with-good-rays.png
+back_overlay: true
+back_image_keep_top: true
+back_body_font: 172
+back_closing_gap: 1.65
+back_overlay_top: 0.005
+back_top_padding: 0
 ---
 
 ## Front
@@ -28,11 +36,7 @@ Therefore...
 
 ## Back
 
-I believe that I cannot by my own reason or strength believe in Jesus Christ, my Lord, or come to Him; but the Holy Ghost has called me by the Gospel, enlightened me with His gifts, sanctified and kept me in the true faith;
-
-even as He calls, gathers, enlightens, and sanctifies the whole Christian Church on earth, and keeps it with Jesus Christ in the one true faith;
-
-in which Christian Church He forgives daily and richly all sins to me and all believers, and at the last day will raise up me and all the dead, and will give to me and to all believers in Christ everlasting life.
+I believe that I cannot by my own reason or strength believe in Jesus Christ, my Lord, or come to Him; but the Holy Ghost has called me by the Gospel, enlightened me with His gifts, sanctified and kept me in the true faith.
 
 ### Closing
 This is most certainly true.

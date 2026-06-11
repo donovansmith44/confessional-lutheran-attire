@@ -185,19 +185,23 @@ def _hex_to_rgb(h: str) -> tuple[int, int, int]:
 _IMG_CACHE: dict[tuple[str, str], tuple[str, int, int]] = {}
 
 
-def image_layer(path: Path, ink: str) -> tuple[str, int, int]:
+def image_layer(path: Path, ink: str, keep_top: bool = False) -> tuple[str, int, int]:
     """Load a black-on-white line-art PNG, recolor every dark pixel to `ink`
     and turn white into transparency (alpha = darkness). Returns
     (data_uri, width, height). This is what makes one drawing reusable across
     shirt colors: the same art is tinted to the shirt's body color and inverts
-    automatically (light on black, dark on gray)."""
-    key = (str(path), ink)
+    automatically (light on black, dark on gray).
+
+    `keep_top` preserves the empty space above the artwork (instead of trimming
+    it) — useful when the drawing's own sky is where overlaid text will sit."""
+    key = (str(path), ink, keep_top)
     if key in _IMG_CACHE:
         return _IMG_CACHE[key]
     lum = Image.open(path).convert("L")
     w, h = lum.size
     r, g, b = _hex_to_rgb(ink)
     alpha = lum.point(lambda v: 255 - v)          # dark ink → opaque, white → clear
+    alpha = alpha.point(lambda v: 0 if v < 24 else v)  # drop faint speckle → crisp print
     out = Image.new("RGBA", (w, h), (r, g, b, 0))
     out.putalpha(alpha)
     # Trim the surrounding empty margin so the drawing itself fills the space it
@@ -207,7 +211,10 @@ def image_layer(path: Path, ink: str) -> tuple[str, int, int]:
     solid = alpha.point(lambda v: 255 if v > 40 else 0)
     bbox = solid.getbbox()
     if bbox:
-        out = out.crop(bbox)
+        left, top, right, bot = bbox
+        if keep_top:
+            top = 0
+        out = out.crop((left, top, right, bot))
         w, h = out.size
     buf = io.BytesIO()
     out.save(buf, format="PNG")
@@ -289,7 +296,10 @@ def render_front_image_layout(meta, blocks, palette, with_bg=True):
 
     # illustration: fill the print width (uses all the horizontal real estate)
     frac = float(meta.get("front_image_width", 1.0))
-    uri, iw, ih = image_layer((ROOT / meta["front_image"]).resolve(), ink)
+    uri, iw, ih = image_layer(
+        (ROOT / meta["front_image"]).resolve(), ink,
+        keep_top=bool(meta.get("front_image_keep_top")),
+    )
     img_w = max_w * frac
     img_h = img_w * (ih / iw)
     img_x = cx - img_w / 2
@@ -313,9 +323,15 @@ def render_front_image_layout(meta, blocks, palette, with_bg=True):
     verse_blocks = [b for b in blocks if (b["heading"] or "").lower() != "closing"]
     closing = next((b for b in blocks if (b["heading"] or "").lower() == "closing"), None)
 
+    # Optionally lift the verse toward the header by a fraction of the gap
+    # between the header rule and the verse's top — without moving the closing.
+    raise_frac = float(meta.get("front_verse_raise_frac", 0.0))
     if overlay:
-        y = img_y + img_h * float(meta.get("front_overlay_top", 0.03))
+        verse_start = img_y + img_h * float(meta.get("front_overlay_top", 0.03))
+        raise_amt = raise_frac * (verse_start - rule_y)
+        y = verse_start - raise_amt
     else:
+        raise_amt = 0.0
         y = img_y + img_h + verse_font * 1.4
 
     last_y = y
@@ -342,7 +358,8 @@ def render_front_image_layout(meta, blocks, palette, with_bg=True):
 
     if closing:
         para = " ".join(closing["paragraphs"])
-        y = last_y + closing_font * closing_gap
+        # add raise_amt back so the closing stays put even when the verse is lifted
+        y = last_y + raise_amt + closing_font * closing_gap
         lines = wrap_text(para, max_w, closing_font, SERIF_CW)
         svg, end_y = text_block(cx, y, lines, closing_font, palette["body"], style="italic")
         content.append(svg)
@@ -439,8 +456,96 @@ def render_front_layout(meta, blocks, palette, with_bg=True):
     return parts, height
 
 
+def render_back_image_layout(meta, blocks, palette, with_bg=True):
+    """Back layout for designs with a `back_image:` illustration: headline at the
+    top, the artwork filling the print width, and the body text (e.g. the first
+    sentence of the catechism explanation) composited over the open sky when
+    `back_overlay` is set. Mirrors the front image layout."""
+    pad_x = 20
+    cx = CANVAS_W // 2
+    max_w = CANVAS_W - 2 * pad_x
+    ink = palette["body"]
+
+    content: list[str] = []
+    y = TITLE_Y + int(meta.get("back_top_padding", 0))
+
+    # headline + rule
+    heading = meta.get("back_heading") or meta.get("title", "")
+    h_lines = title_lines(heading, max_w)
+    svg, end_y = text_block(
+        cx, y, h_lines, TITLE_FONT, ink,
+        family=TITLE_FAMILY, weight="900", letter_spacing=8,
+    )
+    content.append(svg)
+    rule_y = end_y + TITLE_FONT * 0.5
+    rule_w = 480
+    content.append(
+        f'<line x1="{cx - rule_w // 2}" y1="{rule_y}" '
+        f'x2="{cx + rule_w // 2}" y2="{rule_y}" '
+        f'stroke="{ink}" stroke-width="7"/>'
+    )
+    y = rule_y + TITLE_FONT * 0.5
+
+    # illustration: fill the print width
+    frac = float(meta.get("back_image_width", 1.0))
+    uri, iw, ih = image_layer(
+        (ROOT / meta["back_image"]).resolve(), ink,
+        keep_top=bool(meta.get("back_image_keep_top")),
+    )
+    img_w = max_w * frac
+    img_h = img_w * (ih / iw)
+    img_x = cx - img_w / 2
+    img_y = y + 140
+    content.append(
+        f'<image x="{img_x:.1f}" y="{img_y:.1f}" '
+        f'width="{img_w:.1f}" height="{img_h:.1f}" '
+        f'href="{uri}" xlink:href="{uri}" '
+        f'preserveAspectRatio="xMidYMid meet"/>'
+    )
+
+    # body text: stacked beneath the art, or composited over the open sky
+    overlay = bool(meta.get("back_overlay"))
+    body_font = int(meta.get("back_body_font", 150 if overlay else 180))
+    body_stroke = float(meta.get("back_body_bold", 2.2 if overlay else 0))
+    closing_font = int(meta.get("back_closing_font", 200))
+    body_blocks = [b for b in blocks if (b["heading"] or "").lower() != "closing"]
+    closing = next((b for b in blocks if (b["heading"] or "").lower() == "closing"), None)
+
+    if overlay:
+        y = img_y + img_h * float(meta.get("back_overlay_top", 0.03))
+    else:
+        y = img_y + img_h + body_font * 1.4
+
+    last_y = y
+    for b in body_blocks:
+        for para in b["paragraphs"]:
+            lines = wrap_text(para, max_w, body_font, SERIF_CW)
+            svg, end_y = text_block(cx, y, lines, body_font, palette["body"], stroke_w=body_stroke)
+            content.append(svg)
+            last_y = end_y
+            y = end_y + body_font * 1.5
+
+    if closing:
+        para = " ".join(closing["paragraphs"])
+        y = last_y + closing_font * float(meta.get("back_closing_gap", 1.2))
+        lines = wrap_text(para, max_w, closing_font, SERIF_CW)
+        svg, end_y = text_block(cx, y, lines, closing_font, palette["body"], style="italic")
+        content.append(svg)
+        last_y = end_y
+
+    bottom = (img_y + img_h) if overlay else last_y
+    height = int(bottom + BOTTOM_MARGIN)
+    parts: list[str] = []
+    if with_bg:
+        parts.append(f'<rect width="{CANVAS_W}" height="{height}" fill="{palette["bg"]}"/>')
+    parts.extend(content)
+    return parts, height
+
+
 def render_back_layout(meta, blocks, palette, with_bg=True):
     """Render the back design. Returns (parts, canvas_height)."""
+    if meta.get("back_image") and HAVE_PIL:
+        return render_back_image_layout(meta, blocks, palette, with_bg)
     pad_x = 20  # use almost the full canvas width; ~0.07" margin each side at 300dpi
     cx = CANVAS_W // 2
     max_w = CANVAS_W - 2 * pad_x
