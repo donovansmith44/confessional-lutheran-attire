@@ -176,6 +176,18 @@ def escape(s: str) -> str:
     return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
+def png_with_dpi(raw: bytes, dpi: int) -> bytes:
+    """Re-save a PNG with a real resolution tag. resvg writes no pHYs chunk, so
+    file-info and some POD validators assume 96 DPI even though the pixels are
+    300 DPI at the 12 in print width. Stamping the tag makes them agree."""
+    if not HAVE_PIL:
+        return raw
+    im = Image.open(io.BytesIO(raw))
+    buf = io.BytesIO()
+    im.save(buf, format="PNG", dpi=(dpi, dpi))
+    return buf.getvalue()
+
+
 def _hex_to_rgb(h: str) -> tuple[int, int, int]:
     h = h.lstrip("#")
     return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))  # type: ignore[return-value]
@@ -772,14 +784,15 @@ def build_one(path: Path):
 
         if HAVE_PNG:
             font_dirs = [str(_FONTS_DIR)] if _FONTS_DIR.exists() else None
-            (prints_dir / "front.png").write_bytes(bytes(resvg_py.svg_to_bytes(
+            dpi = CANVAS_W // 12  # 3600 px over a 12 in print width = 300 DPI
+            (prints_dir / "front.png").write_bytes(png_with_dpi(bytes(resvg_py.svg_to_bytes(
                 svg_string=front_print_svg, font_dirs=font_dirs,
                 width=CANVAS_W, height=front_h,
-            )))
-            (prints_dir / "back.png").write_bytes(bytes(resvg_py.svg_to_bytes(
+            )), dpi))
+            (prints_dir / "back.png").write_bytes(png_with_dpi(bytes(resvg_py.svg_to_bytes(
                 svg_string=back_print_svg, font_dirs=font_dirs,
                 width=CANVAS_W, height=back_h,
-            )))
+            )), dpi))
 
         print(f"  - {color}: preview→{out_dir.relative_to(ROOT)}  prints→{prints_dir.relative_to(ROOT)}")
     return slug, colors, meta["title"]
