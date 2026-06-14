@@ -14,9 +14,9 @@ front_overlay: true
 front_hide_citation: true
 front_verse_raise_frac: 0.25
 front_top_padding: 0
-# Open-tomb illustration behind the back, broken light rays from the doorway.
-# Vectorize-upscaled (OpenCV contour trace, 4x) to ~345 PPI for crisp printing.
-back_image: tomb-with-good-rays-hires.png
+# Open-tomb illustration behind the back, gold light rays from the doorway.
+# Vectorize-upscaled (OpenCV contour trace, 4x) to ~511 PPI for crisp printing.
+back_image: tomb-final-fr-hires.png
 back_overlay: true
 back_image_keep_top: true
 back_heading_font: 520

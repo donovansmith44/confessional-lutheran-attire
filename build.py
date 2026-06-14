@@ -21,7 +21,7 @@ from pathlib import Path
 import yaml
 
 try:
-    from PIL import Image
+    from PIL import Image, ImageChops
     HAVE_PIL = True
 except ImportError:
     HAVE_PIL = False
@@ -197,30 +197,56 @@ def _hex_to_rgb(h: str) -> tuple[int, int, int]:
 _IMG_CACHE: dict[tuple[str, str], tuple[str, int, int]] = {}
 
 
+def _gold_mask(src: "Image.Image") -> "Image.Image":
+    """Mask (L mode, 255 = gold) of warm/gold accent pixels in a colour drawing:
+    warmer than blue, reasonably bright in R and G, and neither near-white nor
+    near-black. Used to keep coloured light rays gold instead of tinting them to
+    the shirt ink. Returns an all-black mask for plain black-on-white art."""
+    r, g, b = src.split()
+    warmth = ImageChops.subtract(ImageChops.add(r, g, scale=2.0), b)  # (R+G)/2 - B
+    lum = src.convert("L")
+    mask = warmth.point(lambda v: 255 if v > 35 else 0)
+    mask = ImageChops.multiply(mask, r.point(lambda v: 255 if v > 120 else 0))
+    mask = ImageChops.multiply(mask, g.point(lambda v: 255 if v > 90 else 0))
+    mask = ImageChops.multiply(mask, lum.point(lambda v: 255 if 60 < v < 235 else 0))
+    return mask
+
+
 def image_layer(path: Path, ink: str, keep_top: bool = False) -> tuple[str, int, int]:
-    """Load a black-on-white line-art PNG, recolor every dark pixel to `ink`
-    and turn white into transparency (alpha = darkness). Returns
-    (data_uri, width, height). This is what makes one drawing reusable across
-    shirt colors: the same art is tinted to the shirt's body color and inverts
-    automatically (light on black, dark on gray).
+    """Load a line-art PNG, recolor every dark pixel to `ink` and turn white into
+    transparency (alpha = darkness). Returns (data_uri, width, height). This is
+    what makes one drawing reusable across shirt colors: the same art is tinted
+    to the shirt's body color and inverts automatically (light on black, dark on
+    gray). Warm/gold accents (e.g. coloured light rays) are kept in their own
+    color instead of being tinted, so they read as gold on every shirt color.
 
     `keep_top` preserves the empty space above the artwork (instead of trimming
     it) — useful when the drawing's own sky is where overlaid text will sit."""
     key = (str(path), ink, keep_top)
     if key in _IMG_CACHE:
         return _IMG_CACHE[key]
-    lum = Image.open(path).convert("L")
+    src = Image.open(path).convert("RGB")
+    lum = src.convert("L")
     w, h = lum.size
     r, g, b = _hex_to_rgb(ink)
     alpha = lum.point(lambda v: 255 - v)          # dark ink → opaque, white → clear
     alpha = alpha.point(lambda v: 0 if v < 24 else v)  # drop faint speckle → crisp print
     out = Image.new("RGBA", (w, h), (r, g, b, 0))
     out.putalpha(alpha)
+    # Lay the gold accents over the tinted linework in their own color so they
+    # survive the shirt-color tint (plain b/w art has no gold → mask is empty).
+    gold = _gold_mask(src)
+    coverage = alpha
+    if gold.getbbox():
+        gold_layer = src.convert("RGBA")
+        gold_layer.putalpha(gold)
+        out = Image.alpha_composite(out, gold_layer)
+        coverage = ImageChops.lighter(alpha, gold)
     # Trim the surrounding empty margin so the drawing itself fills the space it
     # is given on the shirt (the source art often has whitespace below/around it).
     # Threshold first so faint near-white specks at the edges don't defeat the
-    # crop — only solid ink counts toward the bounding box.
-    solid = alpha.point(lambda v: 255 if v > 40 else 0)
+    # crop — only solid ink (or gold) counts toward the bounding box.
+    solid = coverage.point(lambda v: 255 if v > 40 else 0)
     bbox = solid.getbbox()
     if bbox:
         left, top, right, bot = bbox
